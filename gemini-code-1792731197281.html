@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VSTEP Reading Online Exam</title>
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --secondary: #2563eb;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --border: #cbd5e1;
+      --correct: #16a34a;
+      --correct-bg: #dcfce7;
+      --wrong: #dc2626;
+      --wrong-bg: #fee2e2;
+      --highlight: #fef08a;
+      --evidence-tag: #b91c1c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Times New Roman", Times, serif;
+      background-color: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Màn hình đăng nhập */
+    #startModal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.75);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .modal-box {
+      background: #ffffff;
+      padding: 32px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 440px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    .modal-box h2 {
+      color: var(--primary);
+      margin-bottom: 8px;
+      font-size: 1.5rem;
+      text-align: center;
+    }
+    .modal-box p {
+      color: #64748b;
+      font-size: 1.05rem;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 16px;
+    }
+    .form-group label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 6px;
+      font-size: 1.05rem;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 1.05rem;
+      font-family: "Times New Roman", Times, serif;
+      outline: none;
+    }
+    .form-group input:focus {
+      border-color: var(--secondary);
+      box-shadow: 0 0 0 2px #bfdbfe;
+    }
+    .btn-start {
+      width: 100%;
+      padding: 12px;
+      background: var(--secondary);
+      color: #ffffff;
+      font-weight: bold;
+      font-size: 1.15rem;
+      font-family: "Times New Roman", Times, serif;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+    .btn-start:hover { background: var(--primary); }
+
+    /* Header */
+    header {
+      background: #ffffff;
+      border-bottom: 2px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .student-badge {
+      font-weight: bold;
+      color: var(--primary);
+      font-size: 1.15rem;
+    }
+    .timer-badge {
+      background: #fee2e2;
+      color: #991b1b;
+      font-weight: bold;
+      font-size: 1.2rem;
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid #fecaca;
+    }
+    .timer-badge.warning {
+      animation: pulse 1s infinite alternate;
+    }
+    @keyframes pulse {
+      from { background-color: #fee2e2; }
+      to { background-color: #f87171; color: white; }
+    }
+
+    /* Split layout */
+    .split-container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Cột bài đọc */
+    .passage-panel {
+      flex: 1;
+      background: #ffffff;
+      padding: 28px;
+      overflow-y: auto;
+      border-right: 2px solid var(--border);
+      line-height: 1.9;
+      font-size: 1.15rem;
+      position: relative;
+    }
+    .passage-panel h2 {
+      color: var(--primary);
+      margin-bottom: 16px;
+      font-size: 1.4rem;
+    }
+    .passage-panel p {
+      margin-bottom: 18px;
+      text-align: justify;
+    }
+
+    .highlight-active {
+      cursor: crosshair !important;
+    }
+    mark.student-hl {
+      background-color: var(--highlight);
+      border-radius: 2px;
+      padding: 0 2px;
+    }
+
+    /* Đánh dấu chứng cứ sau khi nộp bài */
+    .q-tag {
+      display: none;
+      font-weight: bold;
+      color: var(--evidence-tag);
+      background-color: #fee2e2;
+      border: 1px solid #fca5a5;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.95rem;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+    .evidence-text {
+      transition: all 0.3s ease;
+    }
+    .show-evidence .q-tag {
+      display: inline-block;
+    }
+    .show-evidence .evidence-text {
+      font-weight: bold;
+      text-decoration: underline;
+      text-decoration-color: #f87171;
+    }
+
+    /* Nút bút Highlight */
+    .hl-widget {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      padding: 6px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 100;
+    }
+    .btn-pen {
+      background: none;
+      border: none;
+      font-size: 1.4rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 8px;
+      border-radius: 50%;
+      transition: all 0.2s;
+    }
+    .btn-pen:hover { background: #f1f5f9; }
+    .btn-pen.active {
+      background: #fef08a;
+      box-shadow: 0 0 0 2px #ca8a04;
+    }
+    .pen-status {
+      font-size: 1rem;
+      font-weight: bold;
+      color: #475569;
+    }
+    .btn-clear-hl {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      font-size: 0.95rem;
+      font-family: "Times New Roman", Times, serif;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .btn-clear-hl:hover { color: #dc2626; }
+
+    /* Cột câu hỏi */
+    .question-panel {
+      flex: 1;
+      padding: 28px;
+      overflow-y: auto;
+      background: #f8fafc;
+    }
+    .question-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .q-text {
+      font-weight: bold;
+      margin-bottom: 14px;
+      font-size: 1.15rem;
+      line-height: 1.5;
+    }
+
+    /* Label Highlight required */
+    .label-hl-required {
+      display: inline-block;
+      background-color: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+      font-weight: bold;
+      font-size: 0.85rem;
+      padding: 3px 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .option-label {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      transition: background 0.15s ease, border-color 0.15s ease;
+    }
+    .option-label:hover { background: #f1f5f9; }
+    .option-label input { margin-right: 12px; flex-shrink: 0; }
+
+    /* Result states */
+    .option-label.is-correct {
+      background: var(--correct-bg) !important;
+      border-color: var(--correct) !important;
+      color: var(--correct) !important;
+      font-weight: bold;
+    }
+    .option-label.is-wrong {
+      background: var(--wrong-bg) !important;
+      border-color: var(--wrong) !important;
+      color: var(--wrong) !important;
+    }
+
+    .explanation-box {
+      display: none;
+      margin-top: 14px;
+      padding: 14px;
+      background: #f8fafc;
+      border-left: 4px solid var(--secondary);
+      border-radius: 4px;
+      font-size: 1.05rem;
+      line-height: 1.6;
+    }
+    .explanation-box .ev-quote {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: #eff6ff;
+      border-radius: 4px;
+      color: #1e3a8a;
+      font-style: italic;
+    }
+
+    /* Các nút điều khiển */
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      margin: 24px 0 40px;
+    }
+    .btn {
+      padding: 12px 24px;
+      font-size: 1.1rem;
+      font-weight: bold;
+      font-family: "Times New Roman", Times, serif;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .btn-submit { background: var(--secondary); color: #fff; }
+    .btn-submit:hover { background: var(--primary); }
+    .btn-reset { background: #e2e8f0; color: #334155; }
+    .btn-reset:hover { background: #cbd5e1; }
+
+    .score-banner {
+      display: none;
+      background: #dbeafe;
+      border: 1px solid #bfdbfe;
+      color: var(--primary);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    .score-banner h3 { font-size: 1.4rem; margin-bottom: 6px; }
+
+    @media (max-width: 850px) {
+      body { height: auto; overflow: auto; }
+      .split-container { flex-direction: column; height: auto; overflow: visible; }
+      .passage-panel { border-right: none; border-bottom: 2px solid var(--border); height: 50vh; }
+      .question-panel { height: auto; overflow: visible; }
+      .hl-widget { bottom: 12px; left: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- MODAL ĐĂNG NHẬP -->
+<div id="startModal">
+  <div class="modal-box">
+    <h2>Thông Tin Thí Sinh</h2>
+    <p>Vui lòng điền thông tin để bắt đầu tính giờ làm bài (15 phút).</p>
+    <div class="form-group">
+      <label for="studentName">Họ và Tên:</label>
+      <input type="text" id="studentName" placeholder="Ví dụ: Nguyễn Văn A" required>
+    </div>
+    <div class="form-group">
+      <label for="studentClass">Khóa / Lớp học:</label>
+      <input type="text" id="studentClass" placeholder="Ví dụ: VSTEP B1-B2 K24" required>
+    </div>
+    <button type="button" class="btn-start" onclick="startExamSession()">Bắt Đầu Làm Bài</button>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="student-badge" id="studentDisplay">Thí sinh: Chưa đăng nhập</div>
+  <div class="timer-badge" id="timerBadge">&#9201; <span id="timeDisplay">15:00</span></div>
+</header>
+
+<div class="split-container">
+  <!-- BÊN TRÁI: BÀI ĐỌC -->
+  <section class="passage-panel" id="passagePanel">
+    <h2>Reading Passage</h2>
+    <div id="passageContent">
+      <p>
+        A snowfall consists of myriads of <strong>minute</strong> ice crystals that fall to the ground in the form of frozen precipitation. 
+        <span class="q-tag">[Q11, Q20]</span><span class="evidence-text">The formation of snow begins with these ice crystals in the subfreezing strata of the middle and upper atmosphere when there is an adequate supply of moisture present.</span> 
+        <span class="q-tag">[Q13]</span><span class="evidence-text">At the core of every ice crystal is a minuscule nucleus, a solid particle of matter around which moisture condenses and freezes.</span> 
+        Liquid water droplets floating in the supercooled atmosphere and free ice crystals cannot coexist within the same cloud, since the vapor pressure of ice is less than that of water. 
+        This enables the ice crystals to rob the liquid droplets of their moisture and grow continuously. 
+        <span class="q-tag">[Q11]</span><span class="evidence-text">The process can be very rapid, quickly creating sizable ice crystals, some of which <strong>adhere</strong> to each other to create a cluster of ice crystals or a snowflake.</span> 
+        Simple flakes possess a variety of beautiful forms, usually hexagonal, though the symmetrical shapes reproduced in most microscope photography of snowflakes are not usually found in actual snowfalls. 
+        Typically, snowflakes in actual snowfall consists of broken fragments and clusters of adhering ice crystals.
+      </p>
+      <p>
+        <span class="q-tag">[Q15, Q16, Q17]</span><span class="evidence-text">For a snowfall to continue once <strong>it</strong> starts, there must be a constant inflow of moisture to supply the nuclei.</span> 
+        <span class="q-tag">[Q18]</span><span class="evidence-text">This moisture is supplied by the passage of an airstream over a water surface and its subsequent lifting to higher regions of the atmosphere.</span> 
+        <span class="q-tag">[Q15]</span><span class="evidence-text">The Pacific Ocean is the source of moisture for most snowfalls west of the Rocky Mountains, while the Gulf of Mexico and the Atlantic Ocean feed water vapor into the air currents over the central and eastern sections of the United States. Other geographical features also can be the source of moisture for some snowstorms.</span> 
+        <span class="q-tag">[Q18]</span><span class="evidence-text">For example, areas adjacent to the Great Lakes experience their own unique lake-effect storms, employing a variation of the process on a local scale.</span> 
+        In addition, mountainous section or rising terrain can <strong>initiate</strong> snowfalls by the geographical lifting of a moist airstream.
+      </p>
+    </div>
+
+    <!-- ICON BÚT HIGHLIGHT -->
+    <div class="hl-widget">
+      <button type="button" class="btn-pen" id="penBtn" title="Bật/Tắt bút highlight" onclick="togglePen()">&#9998;</button>
+      <span class="pen-status" id="penStatus">Chọn bút highlight</span>
+      <button type="button" class="btn-clear-hl" onclick="clearAllHighlights()">Xóa highlight</button>
+    </div>
+  </section>
+
+  <!-- BÊN PHẢI: 10 CÂU HỎI -->
+  <section class="question-panel" id="questionPanel">
+    <div class="score-banner" id="scoreBanner"></div>
+
+    <form id="quizForm">
+      <!-- Question 11 -->
+      <div class="question-card" data-q="11" data-ans="D">
+        <div class="q-text">Question 11: Which of the following questions does the author answer in the first paragraph?</div>
+        <div class="options">
+          <label class="option-label"><input type="radio" name="q11" value="A"> A. Why are snowflakes hexagonal?</label>
+          <label class="option-label"><input type="radio" name="q11" value="B"> B. What is the optimum temperature for snow?</label>
+          <label class="option-label"><input type="radio" name="q11" value="C"> C. In which months does most snow fall?</label>
+          <label class="option-label"><input type="radio" name="q11" value="D"> D. How are snowflakes formed?</label>
+        </div>
+        <div class="explanation-box">
+          <strong>Đáp án đúng: D</strong><br>
+          <em>Giải thích:</em> Đoạn 1 trình bày chi tiết toàn bộ chu trình hình thành tuyết từ tinh thể băng: bắt đầu từ nhân rắn, hơi ẩm ngưng tụ, hút ẩm từ giọt nước lỏng và kết dính lại thành bông tuyết.<br>
+          <div class="ev-quote"><strong>Evidence:</strong> "The formation of snow begins with these ice crystals in the subfreezing strata... quickly creating sizable ice crystals, some of which adhere to each other to create a cluster of ice crystals or a snowflake."</div>
+        </div>
+      </div>
+
+      <!-- Question 12 -->
+      <div class="question-card" data-q="12" data-ans="A">
+        <div class="q-text">Question 12: The word "minute" in paragraph 1 is closest in meaning to _______.</div>
+        <div class="options">
+          <label class="option-label"><input type="radio" name="q12" value="A"> A. tiny</label>
+          <label class="option-label"><input type="radio" name="q12" value="B"> B. quick</label>
+          <label class="option-label"><input type="radio" name="q12" value="C"> C. clear</label>
+          <label class="option-label"><input type="radio" name="q12" value="D"> D. sharp</label>
+        </div>
+        <div class="explanation-box">
+          <strong>Đáp án đúng: A</strong><br>
+          <em>Giải thích:</em> Tính từ "minute" mang nghĩa là cực kỳ nhỏ bé (extremely small), đồng nghĩa với "tiny".
+        </div>
+      </div>
+
+      <!-- Question 13: CÓ LABEL HIGHLIGHT REQUIRED -->
+      <div class="question-card" data-q="13" data-ans="B">
+        <div><span class="label-hl-required">&#9998; Highlight required</span></div>
+        <div class="q-text">Question 13: What is at the center of an ice crystal?</div>
+        <div class="options">
+          <label class="option-label"><input type="radio" name="q13" value="A"> A. A small snowflake</label>
+          <label class="option-label"><input type="radio" name="q13" value="B"> B. A nucleus</label>
+          <label class="option-label"><input type="radio" name="q13" value="C"> C. A drop of water</label>
+          <label class="option-label"><input type="radio" name="q13" value="D"> D. A hexagon</label>
+        </div>
+        <div class="explanation-box">
+          <strong>Đáp án đúng: B</strong><br>
+          <em>Giải thích:</em> Bài đọc chỉ rõ ở phần lõi (center / core) của tinh thể băng là một hạt nhân tí hon (minuscule nucleus).<br>
+          <div class="ev-quote"><strong>Evidence:</strong> "At the core of every ice crystal is a minuscule nucleus, a solid particle of matter around which moisture condenses and freezes."</div>
+        </div>
+      </div>
+
+      <!-- Question 14 -->
+      <div class="question-card" data-q="14" data-ans="C">
+        <div class="q-text">Question 14: The word "adhere" in paragraph 1 is closest in meaning to _______.</div>
+        <div class="options">
+          <label class="option-label"><input type="radio" name="q14" value="A"> A. belong</label>
+          <label class="option-label"><input type="radio" name="q14" value="B"> B. relate</label>
+          <label class="option-label"><input type="radio" name="q14" value="C"> C. stick</label>
+          <label class="option-label"><input type="radio" name="q14" value="D"> D. speed</label>
+        </div>
+        <div class="explanation-box">
+          <strong>Đáp án đúng: C</strong><br>
+          <em>Giải thích:</em> Động từ "adhere (to)" nghĩa là dính chặt, bám dính vào nhau, đồng nghĩa với "stick".
+        </div>
+      </div>
+
+      <!-- Question 15 -->
+      <div class="question-card" data-q="15" data-ans="D">
+        <div class="q-text">Question 15: What is the main topic of the second paragraph?</div>
+        <div class="options">
+          <label class="option-label"><input type="radio" name="q15" value="A"> A. How ice crystals form</label>
+          <label class="option-label"><input type="radio" name="q15" value="B"> B. How moisture affects temperature</label>
+          <label class="option-label"><input type="radio" name="q15" value="C"> C. What happens when ice crystals melt</label>
+          <label class="option-label"><input type="radio" name="q15" value="D"> D. Where the moisture to supply the nuclei comes from</label>
+        </div>
+        <div class="explanation-box">
+          <strong>Đáp án đúng: D</strong><br>
+          <em>Giải thích:</em> Đoạn 2 tập trung lý giải các nguồn cung cấp hơi ẩm liên tục để nuôi dưỡng các hạt nhân duy trì tuyết rơi (đại dương, vịnh, hồ lớn, luồng gió núi).<br>
+          <div class="ev-quote"><strong>Evidence:</strong> "For a snowfall to continue once it starts, there must be a constant inflow of moisture to supply the nuclei. This moisture is supplied by... The Pacific Ocean is the source of moisture... Other geographical features also can be the source..."</div>
+        </div>
+      </div>
+
+      <!-- Question 16 -->
+      <div class="question-card" data-q="16" data-ans="A">
+        <div class="q-text">Question 16: The word "it" in paragraph 2 refers to _______.</div>
+        <div class="options">
+          <label class="option-label"><input type="radio" name="q16" value="A"> A. snowfall</label>
+          <label class="option-label"><input type="radio" name="q16" value="B"> B. snowflake</label>
+          <label class="option-label"><input type="radio" name="q16" value="C"> C. Cluster</label>
+          <label class="option-label"><input type="radio" name="q16" value="D"> D. moisture</label>
+        </div>
+        <div class="explanation-box">
+          <strong>Đáp án đúng: A</strong><br>
+          <em>Giải thích:</em> Trong câu "For a snowfall to continue once it starts...", đại từ "it" thay thế cho danh từ số ít đứng ngay trước là "snowfall".
+        </div>
+      </div>
+
+      <!-- Question 17: CÓ LABEL HIGHLIGHT REQUIRED -->
+      <div class="question-card" data-q="17" data-ans="C">
+        <div><span class="label-hl-required">&#9998; Highlight required</span></div>
+        <div class="q-text">Question 17: What is necessary for a snowfall to persist?</div>
+        <div class="options">
+          <label class="option-label"><input type="radio" name="q17" value="A"> A. A decrease in the number of snowflakes</label>
+          <label class="option-label"><input type="radio" name="q17" value="B"> B. Lowered vapor pressure in ice crystals</label>
+          <label class="option-label"><input type="radio" name="q17" value="C"> C. A continuous infusion of moisture</label>
+          <label class="option-label"><input type="radio" name="q17" value="D"> D. A change in the direction of the airstream</label>
+        </div>
+        <div class="explanation-box">
+          <strong>Đáp án đúng: C</strong><br>
+          <em>Giải thích:</em> "Persist" nghĩa là tiếp tục kéo dài (continue). Đoạn văn nêu rõ phải có lượng hơi ẩm liên tục tràn vào (constant inflow = continuous infusion).<br>
+          <div class="ev-quote"><strong>Evidence:</strong> "For a snowfall to continue once it starts, there must be a constant inflow of moisture to supply the nuclei."</div>
+        </div>
+      </div>
+
+      <!-- Question 18: CÓ LABEL HIGHLIGHT REQUIRED -->
+      <div class="question-card" data-q="18" data-ans="B">
+        <div><span class="label-hl-required">&#9998; Highlight required</span></div>
+        <div class="q-text">Question 18: How do lake-effect snowstorms form?</div>
+        <div class="options">
+          <label class="option-label"><input type="radio" name="q18" value="A"> A. Water temperature drop below freezing.</label>
+          <label class="option-label"><input type="radio" name="q18" value="B"> B. Moisture rises from a lake into the airstream.</label>
+          <label class="option-label"><input type="radio" name="q18" value="C"> C. Large quantities of wet air come off a nearby mountain.</label>
+          <label class="option-label"><input type="radio" name="q18" value="D"> D. Millions of ice crystals form on the surface of a large lake.</label>
+        </div>
+        <div class="explanation-box">
+          <strong>Đáp án đúng: B</strong><br>
+          <em>Giải thích:</em> Bão tuyết hiệu ứng hồ diễn ra theo cơ chế luồng khí thổi qua mặt hồ thu hơi ẩm rồi được nâng lên tầng cao.<br>
+          <div class="ev-quote"><strong>Evidence:</strong> "This moisture is supplied by the passage of an airstream over a water surface and its subsequent lifting to higher regions... areas adjacent to the Great Lakes experience their own unique lake-effect storms, employing a variation of the process on a local scale."</div>
+        </div>
+      </div>
+
+      <!-- Question 19 -->
+      <div class="question-card" data-q="19" data-ans="D">
+        <div class="q-text">Question 19: The word "initiate" in paragraph 2 is closest in meaning to _______.</div>
+        <div class="options">
+          <label class="option-label"><input type="radio" name="q19" value="A"> A. enhance</label>
+          <label class="option-label"><input type="radio" name="q19" value="B"> B. alter</label>
+          <label class="option-label"><input type="radio" name="q19" value="C"> C. increase</label>
+          <label class="option-label"><input type="radio" name="q19" value="D"> D. begin</label>
+        </div>
+        <div class="explanation-box">
+          <strong>Đáp án đúng: D</strong><br>
+          <em>Giải thích:</em> Động từ "initiate" mang nghĩa là khởi phát, bắt đầu (start), đồng nghĩa với "begin".
+        </div>
+      </div>
+
+      <!-- Question 20: CÓ LABEL HIGHLIGHT REQUIRED -->
+      <div class="question-card" data-q="20" data-ans="D">
+        <div><span class="label-hl-required">&#9998; Highlight required</span></div>
+        <div class="q-text">Question 20: Which of the following could account for the lack of snowfall in a geographical location close to mountains and a major water source?</div>
+        <div class="options">
+          <label class="option-label"><input type="radio" name="q20" value="A"> A. Ground temperatures below the freezing point</label>
+          <label class="option-label"><input type="radio" name="q20" value="B"> B. Too much moisture in the air</label>
+          <label class="option-label"><input type="radio" name="q20" value="C"> C. Too much wind off the mountains</label>
+          <label class="option-label"><input type="radio" name="q20" value="D"> D. Atmospheric temperatures above the freezing point.</label>
+        </div>
+        <div class="explanation-box">
+          <strong>Đáp án đúng: D</strong><br>
+          <em>Giải thích:</em> Điều kiện tiên quyết để tuyết hình thành là nhiệt độ tầng khí quyển phải dưới điểm đóng băng (subfreezing strata). Do đó, nếu nhiệt độ khí quyển trên điểm đóng băng (above the freezing point), tuyết không thể hình thành dù có núi và nước.<br>
+          <div class="ev-quote"><strong>Evidence:</strong> "The formation of snow begins with these ice crystals in the subfreezing strata of the middle and upper atmosphere when there is an adequate supply of moisture present."</div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn btn-submit" onclick="submitExam()">Nộp Bài</button>
+        <button type="button" class="btn btn-reset" onclick="resetExam()">Làm Lại</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<script>
+  let isPenActive = false;
+  let timerInterval = null;
+  let timeLeft = 15 * 60;
+  let isSubmitted = false;
+  let studentInfo = { name: "", class: "" };
+
+  function startExamSession() {
+    const nameInput = document.getElementById("studentName").value.trim();
+    const classInput = document.getElementById("studentClass").value.trim();
+
+    if (!nameInput || !classInput) {
+      alert("Vui lòng điền đầy đủ Họ tên và Khóa/Lớp học!");
+      return;
+    }
+
+    studentInfo.name = nameInput;
+    studentInfo.class = classInput;
+    document.getElementById("studentDisplay").textContent = `Thí sinh: ${studentInfo.name} | Lớp: ${studentInfo.class}`;
+    document.getElementById("startModal").style.display = "none";
+
+    startTimer();
+  }
+
+  function startTimer() {
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      if (timeLeft <= 0) {
+        clearInterval(timerInterval);
+        alert("Đã hết 15 phút! Hệ thống đang tự động nộp bài.");
+        submitExam();
+        return;
+      }
+      timeLeft--;
+      updateTimerDisplay();
+    }, 1000);
+  }
+
+  function updateTimerDisplay() {
+    const min = Math.floor(timeLeft / 60);
+    const sec = timeLeft % 60;
+    const badge = document.getElementById("timerBadge");
+    document.getElementById("timeDisplay").textContent = `${min < 10 ? '0' : ''}${min}:${sec < 10 ? '0' : ''}${sec}`;
+
+    if (timeLeft <= 180) {
+      badge.classList.add("warning");
+    } else {
+      badge.classList.remove("warning");
+    }
+  }
+
+  function togglePen() {
+    isPenActive = !isPenActive;
+    const penBtn = document.getElementById("penBtn");
+    const penStatus = document.getElementById("penStatus");
+    const panel = document.getElementById("passagePanel");
+
+    if (isPenActive) {
+      penBtn.classList.add("active");
+      penStatus.textContent = "Bút đang BẬT (Bấm ESC để tắt)";
+      penStatus.style.color = "#ca8a04";
+      panel.classList.add("highlight-active");
+    } else {
+      penBtn.classList.remove("active");
+      penStatus.textContent = "Chọn bút highlight";
+      penStatus.style.color = "#475569";
+      panel.classList.remove("highlight-active");
+    }
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && isPenActive) {
+      togglePen();
+    }
+  });
+
+  document.getElementById("passageContent").addEventListener("mouseup", () => {
+    if (!isPenActive) return;
+
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return;
+
+    const range = selection.getRangeAt(0);
+    const mark = document.createElement("mark");
+    mark.className = "student-hl";
+
+    try {
+      range.surroundContents(mark);
+    } catch (err) {
+      const fragment = range.extractContents();
+      mark.appendChild(fragment);
+      range.insertNode(mark);
+    }
+    selection.removeAllRanges();
+  });
+
+  function clearAllHighlights() {
+    const marks = document.querySelectorAll("#passageContent mark.student-hl");
+    marks.forEach(m => {
+      const parent = m.parentNode;
+      while (m.firstChild) {
+        parent.insertBefore(m.firstChild, m);
+      }
+      parent.removeChild(m);
+    });
+  }
+
+  function submitExam() {
+    if (isSubmitted) {
+      alert("Bạn đã nộp bài rồi! Hãy bấm 'Làm Lại' nếu muốn thử lại.");
+      return;
+    }
+
+    clearInterval(timerInterval);
+    isSubmitted = true;
+
+    if (isPenActive) togglePen();
+
+    // Kích hoạt hiển thị nhãn số câu [Q...] và in đậm thông tin chứng cứ bên bài đọc
+    document.getElementById("passagePanel").classList.add("show-evidence");
+
+    const cards = document.querySelectorAll(".question-card");
+    let score = 0;
+
+    cards.forEach(card => {
+      const qNum = card.getAttribute("data-q");
+      const expected = card.getAttribute("data-ans");
+      const selected = card.querySelector(`input[name="q${qNum}"]:checked`);
+      const labels = card.querySelectorAll(".option-label");
+      const expBox = card.querySelector(".explanation-box");
+
+      labels.forEach(l => l.classList.remove("is-correct", "is-wrong"));
+
+      labels.forEach(l => {
+        const inp = l.querySelector("input");
+        if (inp && inp.value === expected) {
+          l.classList.add("is-correct");
+        }
+      });
+
+      if (selected) {
+        if (selected.value === expected) {
+          score++;
+        } else {
+          selected.closest(".option-label").classList.add("is-wrong");
+        }
+      }
+
+      if (expBox) expBox.style.display = "block";
+    });
+
+    const banner = document.getElementById("scoreBanner");
+    const percent = Math.round((score / cards.length) * 100);
+    banner.style.display = "block";
+    banner.innerHTML = `
+      <h3>TỔNG KẾT KẾT QUẢ BÀI THI</h3>
+      <p style="margin: 6px 0; font-size: 1.15rem;">Thí sinh: <strong>${studentInfo.name}</strong> - Khóa/Lớp: <strong>${studentInfo.class}</strong></p>
+      <p style="font-size: 1.25rem;">Số câu đúng: <strong>${score} / ${cards.length}</strong> (${percent}%)</p>
+    `;
+    banner.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function resetExam() {
+    if (!confirm("Bạn có chắc chắn muốn làm lại bài thi từ đầu?")) return;
+
+    document.getElementById("quizForm").reset();
+    isSubmitted = false;
+
+    // Ẩn đánh dấu chứng cứ bài đọc
+    document.getElementById("passagePanel").classList.remove("show-evidence");
+
+    document.querySelectorAll(".option-label").forEach(l => {
+      l.classList.remove("is-correct", "is-wrong");
+    });
+    document.querySelectorAll(".explanation-box").forEach(e => {
+      e.style.display = "none";
+    });
+
+    const banner = document.getElementById("scoreBanner");
+    banner.style.display = "none";
+    banner.innerHTML = "";
+
+    clearAllHighlights();
+
+    timeLeft = 15 * 60;
+    updateTimerDisplay();
+    startTimer();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+</script>
+
+</body>
+</html>
